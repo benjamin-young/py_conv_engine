@@ -8,7 +8,7 @@ class PE_Array:
     redundant_array_faulty = []
     distSize = 10000
     #SEU probability
-    probability = 0.1
+    probability = 0.01
     faultDist = poisson.rvs(probability, size=distSize)
 
     #make arrays the right size
