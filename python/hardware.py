@@ -1,8 +1,14 @@
-import PE_Array
+from PE_Array import PE_Array
 import struct
 import numpy as np
 from matplotlib import pyplot as plt
 import math
+
+rows = 8
+kernal_size = 9
+redundantPEs = 8
+
+array = PE_Array(rows,kernal_size,redundantPEs)
 
 def ZeroPad(image,mask):
     maskSize = len(mask)
@@ -29,8 +35,8 @@ def ConvEngine(image, kernal, filterNum):
     #print(filterNum)
     pSum=0
 
-    peArrayRows = len(PE_Array.conv_array)
-    rowIndex = filterNum%peArrayRows
+    peArrayRows = len(array.conv_array)
+    rowIndex = filterNum % peArrayRows
 
     #print(rowIndex)
     
@@ -40,7 +46,7 @@ def ConvEngine(image, kernal, filterNum):
             mask = image[row:row+len(mask),column:column+len(mask[0])]
 
             #perform repair and fault injection 
-            PE_Array.timeStep()
+            array.timeStep()
             
             for kernalRow in range(len(kernal)):
                 for kernalColumn in range(len(kernal[0])):
@@ -50,12 +56,12 @@ def ConvEngine(image, kernal, filterNum):
                     pe = len(pArray)
 
                     #if true use correct answer
-                    if(PE_Array.operate(rowIndex, pe)):
+                    if(array.operate(rowIndex, pe)):
                         peResult = np.float16(maskReg*filterReg)
                     #if false use non redundant PE output
                     else:
                         #no fault in the PE
-                        if(PE_Array.conv_array[rowIndex][pe] == 0):
+                        if(array.conv_array[rowIndex][pe] == 0):
                             peResult = np.float16(maskReg*filterReg)
                         #fault in the PE
                         else:

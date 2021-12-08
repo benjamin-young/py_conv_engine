@@ -1,27 +1,17 @@
 # example of loading the mnist dataset
 import numpy as np
-import tensorflow as tf
 from tensorflow.keras.datasets import mnist
 from matplotlib import pyplot as plt
 import seaborn as sns; sns.set()
-from scipy import signal
-import math
-from skimage.measure import block_reduce
 import keras
 from progress.bar import Bar
-import struct
 from decimal import *
-from random import randint
 import hardware
 
-import PE_Array
 
 (trainX, trainy), (testX, testy) = mnist.load_data()
 print('>Train: X=%s, y=%s' % (trainX.shape, trainy.shape))
 print('>Test: X=%s, y=%s' % (testX.shape, testy.shape))
-
-faultCount = 0
-faultyRedundantPE = 0
      
 
 def layer1(i, model):
@@ -141,7 +131,7 @@ def layer1(i, model):
 def testAccuracy(tests):
     correct = 0
     
-    model=keras.models.load_model('final_model.h5')
+    model=keras.models.load_model('../models/final_model.h5')
     with Bar('Processing...', max = tests) as bar:
         for i in range(tests):
             prediction = layer1(i, model)
@@ -156,7 +146,7 @@ def testAccuracy(tests):
 
 
 def init():
-    model=keras.models.load_model('final_model.h5')
+    model=keras.models.load_model('../models/final_model.h5')
     
     conv_0_weights = model.layers[0].get_weights()[0]
     conv_0_bias = model.layers[0].get_weights()[1]
@@ -191,6 +181,4 @@ def init():
 
 
 testAccuracy(5)
-print("faulty count:  " + str(faultCount))
 
-print("faulty redundant PEs: "+ str(faultyRedundantPE))
