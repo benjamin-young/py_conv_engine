@@ -2,6 +2,8 @@
 code for analysing the effect of single event upsets in a convolution engine on the accuracy of the convolutional neural network inference.
 
 # Convolution Engine Design
+In the convolution engine used in this design, filters are preloaded into the engine row by row. Then the layers of inputs are broadcast to each PE. Each PE performs a multiplication between the filter value and pixel value and sends the output to adder which accumulates the output from the PEs in each row. 
+
 ![conv_engine](https://user-images.githubusercontent.com/8210731/145269247-fe16a1ad-f258-41fc-990c-fd52d06e90df.png)
 
 # Fault Tolerance Design 
