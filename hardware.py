@@ -1,6 +1,8 @@
 import PE_Array
 import struct
 import numpy as np
+from matplotlib import pyplot as plt
+import math
 
 def ZeroPad(image,mask):
     maskSize = len(mask)
@@ -59,8 +61,7 @@ def ConvEngine(image, kernal, filterNum):
                         else:
                             #print("fault")
                             peResult = bitFlip(np.float16(maskReg*filterReg))
-                            global faultCount
-                            faultCount+=1
+                            
 
                     pArray.append(peResult)
                     
