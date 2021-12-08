@@ -12,3 +12,6 @@ Each PE in the convolution engine is duplicated so that faults can be detected.
 
 # Fault injection
 Faults are modelled as SEUs, which only appear for a single time step, that alter the functionality of a PE. The number of SEUs in a timestep is given by a Poisson distribution.
+
+# Analysis 
+The effect of SEUs in the convolution engine on the accuracy of the inference can be measured with the testAccuracy function. The provided model is a simple CNN for MNIST classification. The number of tests can be chosen to determine the accuracy under certain conditions. However, running inference using the harware simulation can be very time consuming.
