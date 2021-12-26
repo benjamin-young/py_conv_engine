@@ -14,7 +14,7 @@ print('>Train: X=%s, y=%s' % (trainX.shape, trainy.shape))
 print('>Test: X=%s, y=%s' % (testX.shape, testy.shape))
      
 
-def layer1(i, model):
+def model(i, model):
     activation = testX[i].astype('float32')
 
     activation = activation/255.0
@@ -134,7 +134,7 @@ def testAccuracy(tests):
     model=keras.models.load_model('../models/final_model.h5')
     with Bar('Processing...', max = tests) as bar:
         for i in range(tests):
-            prediction = layer1(i, model)
+            prediction = model(i, model)
             bar.next()
             if prediction == testy[i]:
                 correct+=1
