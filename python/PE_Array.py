@@ -8,18 +8,18 @@ class PE_Array:
     redundant_array_faulty = []
     distSize = 10000
     #SEU probability
-    probability = 0.01
-    faultDist = poisson.rvs(probability, size=distSize)
+    rate = 0
+    faultDist = poisson.rvs(rate, size=distSize)
 
     #make arrays the right size
     def __init__(self, rows, kernalSize, redundantPEs):
+
         self.conv_array = [ [0]*kernalSize for i in range(rows)]
         self.duplicated_conv_array = self.conv_array
         
         self.redundant_array = [0]*redundantPEs
         self.redundant_array_faulty = [0]*redundantPEs
-        print(self.redundant_array)
-
+        
 
     def repair(self):
         self.conv_array = [ [0]*len(self.conv_array[0]) for i in range(len(self.conv_array))]
@@ -84,3 +84,6 @@ class PE_Array:
             #there are no faults in the PE or duplicated PE therefore the outputs would be the
             #same, therefore use correct result
             return True
+
+    def updateDistribution(self, rate):
+        self.faultDist = poisson.rvs(rate, size=self.distSize)

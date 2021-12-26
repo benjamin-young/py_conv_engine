@@ -1,14 +1,11 @@
-from PE_Array import PE_Array
 import struct
+from unittest import result
 import numpy as np
 from matplotlib import pyplot as plt
 import math
-
-rows = 8
-kernal_size = 9
-redundantPEs = 8
-
-array = PE_Array(rows,kernal_size,redundantPEs)
+from scipy import signal
+from skimage.measure import block_reduce
+from random import randint
 
 def ZeroPad(image,mask):
     maskSize = len(mask)
@@ -21,27 +18,50 @@ def ZeroPad(image,mask):
     return result
 
 def bitFlip(num):
-    binaryOut = format(struct.unpack('!I', struct.pack('!f', num))[0], '016b')
-    binaryOutFlipped = ''.join('1' if x == '0' else '0' for x in binaryOut)
-    flippedFloat = struct.unpack('!f',struct.pack('!I', int(binaryOutFlipped, 2)))[0]
-    inputFloat = struct.unpack('!f',struct.pack('!I', int(binaryOut, 2)))[0]
+    #print(num)
+    scaledNum = int(round(abs(num)*(2**8)))
 
-    return flippedFloat
+    fixed_bits = "{0:b}".format(scaledNum)
+    #print(fixed_bits)
+    binaryOutIter = ['0'] * (16-len(fixed_bits))
+    
+    #if negative add signed bit
+    if(num<0):
+        binaryOutIter[0] = '1'
 
-def ConvEngine(image, kernal, filterNum):
+    binaryOutIter += fixed_bits
+    #print(binaryOutIter)
+
+    #random bitflip position in the 16 bit number
+    randPos = randint(0,15)
+    
+    if(binaryOutIter[randPos] == '1'):
+        binaryOutIter[randPos] = '0'
+    else:
+        binaryOutIter[randPos] = '1'   
+    
+    #print(binaryOutIter)
+    binaryOut = ('').join(binaryOutIter[1:16])
+    #print(binaryOut)
+    #binaryOutFlipped = ''.join('1' if x == '0' else '0' for x in binaryOut)
+    flippedNum = int(binaryOut,2)
+    if(binaryOutIter[0]=='1'):
+        flippedNum=flippedNum*(-1)
+    scaledFilppedNum = flippedNum/(2**8)
+    #print(scaledFilppedNum)
+    return scaledFilppedNum
+
+def ConvEngine(image, kernal, filterNum, array):
     result = []
     pArray = []
     mask = np.zeros((len(kernal),len(kernal)))
-    #print(filterNum)
     pSum=0
 
     peArrayRows = len(array.conv_array)
     rowIndex = filterNum % peArrayRows
 
-    #print(rowIndex)
-    
     for row in range(len(image)+1-len(mask)):
-        #print(row)
+        
         for column in range(len(image[0])+1-len(mask)):
             mask = image[row:row+len(mask),column:column+len(mask[0])]
 
@@ -50,23 +70,25 @@ def ConvEngine(image, kernal, filterNum):
             
             for kernalRow in range(len(kernal)):
                 for kernalColumn in range(len(kernal[0])):
-                    maskReg = np.float16(mask[kernalRow][kernalColumn])
-                    filterReg = np.float16(kernal[kernalRow][kernalColumn])
+                    maskReg = mask[kernalRow][kernalColumn]
+                    filterReg = kernal[kernalRow][kernalColumn]
 
                     pe = len(pArray)
 
+                    mulResult = fixed_point_multiplication(float_to_fixed(maskReg,8),float_to_fixed(filterReg,8),8)
+
                     #if true use correct answer
                     if(array.operate(rowIndex, pe)):
-                        peResult = np.float16(maskReg*filterReg)
+                        peResult = mulResult
                     #if false use non redundant PE output
                     else:
                         #no fault in the PE
                         if(array.conv_array[rowIndex][pe] == 0):
-                            peResult = np.float16(maskReg*filterReg)
+                            peResult = mulResult
                         #fault in the PE
                         else:
                             #print("fault")
-                            peResult = bitFlip(np.float16(maskReg*filterReg))
+                            peResult = bitFlip(mulResult)
                             
 
                     pArray.append(peResult)
@@ -75,9 +97,7 @@ def ConvEngine(image, kernal, filterNum):
             for p in pArray:
                 pSum += p
 
-            #pSum = bitFlip(pSum)
-
-            result.append(np.float16(pSum))
+            result.append(pSum)
             pSum=0
             pArray = []
 
@@ -86,8 +106,7 @@ def ConvEngine(image, kernal, filterNum):
     resultArray = np.reshape(resultArray, (width,width))
 
     return resultArray
-from scipy import signal
-from skimage.measure import block_reduce
+
 
 def verifyConvEngine(image, kernal):
     f1 = signal.correlate2d(image, kernal, mode='valid')
@@ -136,3 +155,26 @@ def FullyConnectedEngine(feature_map,weights,biases):
     result = feature_map.dot(weights) + biases
     result = result * (result>0)
     return result
+
+
+def float_to_fixed(float_num,fractional_bits):
+    scalingFactor = 1/(2**fractional_bits)
+    temp = float_num / scalingFactor
+    fixed_int = int(round(temp))
+    fixed_bits = "{0:b}".format(fixed_int)
+    scaled_fixed_int = fixed_int * scalingFactor
+    
+    return scaled_fixed_int
+
+def fixed_point_multiplication(a,b,fractional_bits):
+    tempA = int(round(a * (2**fractional_bits)))
+    tempB = int(round(b * (2**fractional_bits)))
+
+    tempResult = tempA*tempB
+    
+    scaledTempResult = round(tempResult/(2**fractional_bits))
+    result = scaledTempResult/(2**fractional_bits)
+    
+    return result
+
+    

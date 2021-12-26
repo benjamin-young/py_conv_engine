@@ -2,19 +2,19 @@
 import numpy as np
 from tensorflow.keras.datasets import mnist
 from matplotlib import pyplot as plt
-import seaborn as sns; sns.set()
+import seaborn as sns
 import keras
 from progress.bar import Bar
 from decimal import *
 import hardware
-
+from PE_Array import PE_Array
 
 (trainX, trainy), (testX, testy) = mnist.load_data()
 print('>Train: X=%s, y=%s' % (trainX.shape, trainy.shape))
 print('>Test: X=%s, y=%s' % (testX.shape, testy.shape))
-     
 
-def layer1(i, model):
+
+def inference(i, model,array):
     activation = testX[i].astype('float32')
 
     activation = activation/255.0
@@ -28,7 +28,7 @@ def layer1(i, model):
     
     f1List = []
     for filterIndex in range(conv_0_shape[3]):
-        layer = hardware.ConvEngine(activation, conv_0_weights[:,:,0,filterIndex],filterIndex)
+        layer = hardware.ConvEngine(activation, conv_0_weights[:,:,0,filterIndex],filterIndex,array)
         
         layer = layer + conv_0_bias[filterIndex]
         layer = layer * (layer>0)
@@ -57,7 +57,14 @@ def layer1(i, model):
     for outputLayer in range(conv_1_shape[3]):
         partialSum = np.zeros((f2.shape[1]-conv_1_weights.shape[0]+1,f2.shape[1]-conv_1_weights.shape[0]+1))
         for inputLayer in range(conv_1_shape[2]):
-            layer = hardware.ConvEngine(f2[inputLayer], conv_1_weights[:,:,inputLayer,outputLayer],inputLayer+outputLayer*conv_1_shape[2])
+            layer = hardware.ConvEngine(f2[inputLayer], conv_1_weights[:,:,inputLayer,outputLayer],inputLayer+outputLayer*conv_1_shape[2],array)
+            for row in conv_1_weights[:,:,inputLayer,outputLayer]:
+                for weight in row:
+                    print(hardware.float_to_fixed(weight,8))
+                print("\n")
+
+            print("\n")
+
             partialSum += layer
         
         partialSum = partialSum + conv_1_bias[outputLayer]
@@ -78,10 +85,10 @@ def layer1(i, model):
     for outputLayer in range(conv_2_shape[3]):
         partialSum = np.zeros((newSize,newSize))
         for inputLayer in range(conv_2_shape[2]):
-            layer = hardware.ConvEngine(f3[inputLayer],conv_2_weights[:,:,inputLayer,outputLayer],inputLayer+outputLayer*conv_1_shape[2])
+            layer = hardware.ConvEngine(f3[inputLayer],conv_2_weights[:,:,inputLayer,outputLayer],inputLayer+outputLayer*conv_1_shape[2],array)
             partialSum += layer
 
-        partialSum = partialSum + conv_2_bias[outputLayer]
+        partialSum = partialSum + hardware.float_to_fixed(conv_2_bias[outputLayer],8)
         partialSum = partialSum * (partialSum>0)
         f4List.append(partialSum)
 
@@ -128,17 +135,16 @@ def layer1(i, model):
     f8_out = np.exp(f8)/sum(np.exp(f8))
     return (np.argmax(f8_out))
 
-def testAccuracy(tests):
-    correct = 0
-    
+def testAccuracy(tests,array):
+    correct = 0   
     model=keras.models.load_model('../models/final_model.h5')
     with Bar('Processing...', max = tests) as bar:
         for i in range(tests):
-            prediction = layer1(i, model)
+            prediction = inference(i, model,array)
             bar.next()
             if prediction == testy[i]:
                 correct+=1
-
+        
     print(str(correct) + "/" + str(tests))
 
     accuracy = correct/tests
@@ -155,6 +161,7 @@ def init():
     activation = activation/255
     f1List = []
     f1ListEngine = []
+
     for filterIndex in range(conv_0_shape[3]):
         layer = hardware.verifyConvEngine(activation, conv_0_weights[:,:,0,filterIndex])
         engineLayer = hardware.ConvEngine(activation,conv_0_weights[:,:,0,filterIndex],filterIndex)
@@ -176,9 +183,35 @@ def init():
     plt.imshow(f1[0])
     plt.show()
     plt.imshow(f1Engine[0])
-    plt.show()
+    plt.show() 
+ 
+rows = 8
+kernal_size = 9
+redundantPEs = 1
+scenarios = 20
 
 
+array = PE_Array(rows,kernal_size,redundantPEs)
 
-testAccuracy(5)
+print(0.15)
+array.updateDistribution(0.03)
+testAccuracy(100,array)
 
+print(0.2)
+array.updateDistribution(0.09)
+testAccuracy(100,array)
+
+print(0.25)
+array.updateDistribution(0.1)
+testAccuracy(100,array)
+
+print(0.3)
+array.updateDistribution(0.11)
+testAccuracy(100,array)
+
+
+""" 
+for i in range(scenarios):
+    array.updateDistribution((i)*0.001)
+    
+    testAccuracy(100,array) """
